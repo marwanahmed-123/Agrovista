@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
-import { authService } from "../../services/authService";
 import EyeIcon from "../../components/EyeIcon";
 
 export default function ChangePassword() {
@@ -57,7 +56,8 @@ export default function ChangePassword() {
       setTimeout(() => navigate("/admin"), 2000);
     } catch (err: any) {
       setError(
-        err.response?.data?.message || "Failed to change password. Please try again.",
+        err.response?.data?.message ||
+          "Failed to change password. Please try again.",
       );
     } finally {
       setLoading(false);
