@@ -33,9 +33,7 @@ type SortKey =
   | "email-asc"
   | "email-desc"
   | "status-active"
-  | "status-suspended"
-  | "role-admin"
-  | "role-user";
+  | "status-suspended";
 
 const sortOptions: SortOption<SortKey>[] = [
   { value: "name-asc", label: "Name A\u2013Z" },
@@ -44,8 +42,6 @@ const sortOptions: SortOption<SortKey>[] = [
   { value: "email-desc", label: "Email Z\u2013A" },
   { value: "status-active", label: "Active first" },
   { value: "status-suspended", label: "Suspended first" },
-  { value: "role-admin", label: "Admins first" },
-  { value: "role-user", label: "Users first" },
 ];
 
 const ROLE_COLORS = ["#DC2626", "#3B82F6", "#8B5CF6"];
@@ -68,9 +64,6 @@ export default function Users() {
     name: string;
     newStatus: "ACTIVE" | "SUSPENDED";
   } | null>(null);
-  const [roleFilter, setRoleFilter] = useState<
-    "all" | "super-admin" | "admin" | "user"
-  >("all");
 
   useEffect(() => {
     loadUsers();
@@ -81,7 +74,7 @@ export default function Users() {
     setError(null);
     try {
       const data = await userService.getAllUsers();
-      setUsers(data);
+      setUsers(data.filter((u) => u.role === "USER"));
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to load users");
     } finally {
@@ -101,14 +94,6 @@ export default function Users() {
       );
     });
 
-    if (roleFilter === "super-admin") {
-      result = result.filter((u) => u.role === "SUPER_ADMIN");
-    } else if (roleFilter === "admin") {
-      result = result.filter((u) => u.role === "ADMIN");
-    } else if (roleFilter === "user") {
-      result = result.filter((u) => u.role === "USER");
-    }
-
     result.sort((a, b) => {
       const fullA = `${a.firstName} ${a.lastName}`.toLowerCase();
       const fullB = `${b.firstName} ${b.lastName}`.toLowerCase();
@@ -125,17 +110,13 @@ export default function Users() {
           return a.status === "ACTIVE" ? -1 : 1;
         case "status-suspended":
           return a.status === "SUSPENDED" ? -1 : 1;
-        case "role-admin":
-          return a.role === "SUPER_ADMIN" ? -1 : a.role === "ADMIN" ? -1 : 1;
-        case "role-user":
-          return a.role === "USER" ? -1 : 1;
         default:
           return 0;
       }
     });
 
     return result;
-  }, [users, searchQuery, sortBy, roleFilter]);
+  }, [users, searchQuery, sortBy]);
 
   const totalPages = Math.max(
     1,
@@ -148,7 +129,7 @@ export default function Users() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, sortBy, roleFilter]);
+  }, [searchQuery, sortBy]);
 
   const activeCount = users.filter((u) => u.status === "ACTIVE").length;
   const suspendedCount = users.filter((u) => u.status === "SUSPENDED").length;
@@ -305,12 +286,6 @@ export default function Users() {
     }
   };
 
-  const roleFilterButtons = [
-    { value: "all" as const, label: "All" },
-    { value: "admin" as const, label: "Admins" },
-    { value: "user" as const, label: "Users" },
-  ];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-50 text-gray-500">
@@ -318,9 +293,6 @@ export default function Users() {
       </div>
     );
   }
-
-  const paginatedAdmins = paginatedUsers.filter((u) => u.role === "ADMIN");
-  const paginatedRegular = paginatedUsers.filter((u) => u.role === "USER");
 
   const renderUserRow = (user: User) => {
     const isOpen = expandedId === user.id;
@@ -676,21 +648,6 @@ export default function Users() {
               </p>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="flex bg-gray-100 rounded-lg p-0.5">
-                {roleFilterButtons.map((btn) => (
-                  <button
-                    key={btn.value}
-                    onClick={() => setRoleFilter(btn.value)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                      roleFilter === btn.value
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {btn.label}
-                  </button>
-                ))}
-              </div>
               <SearchInput
                 id="user-search"
                 value={searchQuery}
@@ -724,32 +681,7 @@ export default function Users() {
           ) : (
             <>
               <div className="divide-y divide-gray-100">
-                {roleFilter === "all" ? (
-                  <>
-                    {paginatedAdmins.length > 0 && (
-                      <div>
-                        <div className="px-5 py-2 bg-gray-50 border-b border-gray-100">
-                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                            Admins ({paginatedAdmins.length})
-                          </h3>
-                        </div>
-                        {paginatedAdmins.map(renderUserRow)}
-                      </div>
-                    )}
-                    {paginatedRegular.length > 0 && (
-                      <div>
-                        <div className="px-5 py-2 bg-gray-50 border-b border-gray-100">
-                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                            Users ({paginatedRegular.length})
-                          </h3>
-                        </div>
-                        {paginatedRegular.map(renderUserRow)}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  paginatedUsers.map(renderUserRow)
-                )}
+                {paginatedUsers.map(renderUserRow)}
               </div>
               <Pagination
                 page={page}
